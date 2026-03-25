@@ -120,7 +120,7 @@
       // ──────────────────────────────────────────────────────────────────
 
       const encoded = encodeURIComponent(raw);
-      const ipcUrl  = `ipc://localhost/navigate?q=${encoded}`;
+      const ipcUrl  = `http://ipc.localhost/navigate?q=${encoded}`;
 
       console.log('[JS] Raw input:', raw);
       console.log('[JS] IPC URL:',  ipcUrl);
