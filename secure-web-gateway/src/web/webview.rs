@@ -4,6 +4,7 @@ use wry::WebViewBuilder;
 
 use super::super::UserEvent; 
 use tao::event_loop::EventLoopProxy;
+use web::naviagtion;
 
 const IPC_SCHEME: &str = "ipc";
 const EMPTY_BODY: &[u8] = b"";
@@ -41,6 +42,17 @@ pub fn create_webview(
                 error_response(500)
             })
         })
+        .with_navigation_handler(|url| {
+            println!("[nav] Requested navigation: {}", url);
+
+
+
+        })
+        .with_download_started_handler(|url, _path| {
+            println!("[sandbox] blocked download: {}", url);
+            false
+        })
+        
         .build(window)?;
 
     Ok(webview)
