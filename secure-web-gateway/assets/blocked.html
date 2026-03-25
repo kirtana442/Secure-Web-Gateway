@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Denied</title>
+  <style>
+    *, *::before, *::after { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1e1e2e 0%, #313244 100%);
+      color: #cdd6f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 500px;
+      background: rgba(24, 24, 37, 0.8);
+      border: 1px solid #45475a;
+      border-radius: 12px;
+      padding: 40px;
+      backdrop-filter: blur(10px);
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: rgba(243, 139, 168, 0.2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 12px;
+      color: #f38ba8;
+    }
+
+    .reason {
+      font-size: 16px;
+      color: #a6adc8;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .details {
+      background: rgba(69, 71, 90, 0.3);
+      border-left: 3px solid #f38ba8;
+      padding: 12px 16px;
+      border-radius: 6px;
+      text-align: left;
+      margin-bottom: 24px;
+      font-size: 13px;
+      color: #6c7086;
+      font-family: 'Monaco', 'Courier New', monospace;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #45475a;
+      color: #cdd6f4;
+    }
+
+    .btn-primary:hover {
+      background: #585b70;
+    }
+
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #6c7086;
+    }
+
+    .footer a {
+      color: #89b4fa;
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Icon -->
+    <div class="icon">🛡️</div>
+
+    <!-- Title -->
+    <h1>Access Denied</h1>
+
+    <!-- Reason -->
+    <div class="reason">
+      This page or resource violates the security policy and cannot be accessed.
+    </div>
+
+    <!-- Details -->
+    <div class="details">
+      <strong>Reason:</strong> Content blocked by sandbox
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn-primary" onclick="window.history.back()">Go Back</button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>This is a secure gateway. For more information, contact support.</p>
+    </div>
+  </div>
+
+  <script>
+    console.log('[blocked.html] Rendered');
+    // Note: This page is loaded inside an iframe
+    // Limited to iframe capabilities
+  </script>
+</body>
+</html>

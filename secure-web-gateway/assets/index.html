@@ -2,67 +2,138 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Secure Web Gateway</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+
     body {
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background: #1e1e2e;
       color: #cdd6f4;
       display: flex;
       flex-direction: column;
       height: 100vh;
+      overflow: hidden;
     }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━ TOOLBAR ━━━━━━━━━━━━━━━━━━━━━━ */
     #toolbar {
       display: flex;
       gap: 8px;
       padding: 8px 12px;
       background: #181825;
       border-bottom: 1px solid #313244;
+      flex-shrink: 0;
+      align-items: center;
     }
+
     #url-input {
       flex: 1;
-      padding: 6px 12px;
+      padding: 8px 12px;
       border-radius: 6px;
       border: 1px solid #45475a;
       background: #313244;
       color: #cdd6f4;
       font-size: 14px;
       outline: none;
+      transition: border-color 0.2s;
     }
-    #url-input:focus { border-color: #89b4fa; }
+
+    #url-input:focus { 
+      border-color: #89b4fa;
+      box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.1);
+    }
+
     button {
-      padding: 6px 14px;
+      padding: 8px 14px;
       border-radius: 6px;
       border: none;
       background: #45475a;
       color: #cdd6f4;
       cursor: pointer;
       font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
     }
-    button:hover { background: #585b70; }
+
+    button:hover { 
+      background: #585b70; 
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━ STATUS ━━━━━━━━━━━━━━━━━━━━━━ */
     #status {
-      font-size: 11px;
-      padding: 2px 12px;
+      font-size: 12px;
+      padding: 4px 12px;
       color: #6c7086;
       background: #181825;
       border-bottom: 1px solid #313244;
+      flex-shrink: 0;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
     }
+
+    #status.loading {
+      color: #a6e3a1;
+    }
+
+    #status.error {
+      color: #f38ba8;
+    }
+
+    #status.success {
+      color: #a6e3a1;
+    }
+
+    #status.blocked {
+      color: #f38ba8;
+    }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━ CONTENT ━━━━━━━━━━━━━━━━━━━━━━ */
     #content-area {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       color: #6c7086;
+      overflow: hidden;
+      background: #0f0f1e;
     }
+
     #browser-frame {
       width: 100%;
       height: 100%;
       border: none;
+      background: white;
+    }
+
+    .placeholder {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .placeholder h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .placeholder p {
+      font-size: 14px;
+      color: #6c7086;
     }
   </style>
 </head>
 <body>
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━ TOOLBAR ━━━━━━━━━━━━━━━━━━━━━━ -->
   <div id="toolbar">
     <input
       id="url-input"
@@ -74,45 +145,77 @@
     />
     <button id="go-btn">Go</button>
   </div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━ STATUS ━━━━━━━━━━━━━━━━━━━━━━ -->
   <div id="status">Ready</div>
+
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━ CONTENT ━━━━━━━━━━━━━━━━━━━━━━ -->
   <div id="content-area">
-    <iframe id="browser-frame"></iframe>
+    <div class="placeholder">
+      <h2>Welcome</h2>
+      <p>Enter a URL or search query to get started</p>
+    </div>
   </div>
 
-  <script>
-    const input  = document.getElementById('url-input');
-    const goBtn  = document.getElementById('go-btn');
-    const status = document.getElementById('status');
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━ IFRAME (Hidden until navigation) ━━━━━━━━━━━━━━━━━━━━━━ -->
+  <iframe id="browser-frame" style="display: none;"></iframe>
 
+  <!-- ━━━━━━━━━━━━━━━━━━━━━━ SCRIPT ━━━━━━━━━━━━━━━━━━━━━━ -->
+  <script>
+    // ════════════════════════════════════════════════════════
+    // Security: This is UNTRUSTED. All operations via Rust IPC.
+    // ════════════════════════════════════════════════════════
+
+    const input = document.getElementById('url-input');
+    const goBtn = document.getElementById('go-btn');
+    const status = document.getElementById('status');
+    const contentArea = document.getElementById('content-area');
+    const browserFrame = document.getElementById('browser-frame');
+
+    // ════════════════════════════════════════════════════════
+    // Navigation: Send to Rust for validation
+    // ════════════════════════════════════════════════════════
     async function navigate() {
       const raw = input.value
         .replace(/[\x00-\x1F\x7F]/g, '')
         .trim();
 
-      if (!raw) return;
-
-      status.textContent = 'Sending to Rust for validation…';
+      if (!raw) {
+        status.textContent = 'Empty input';
+        status.className = 'error';
+        return;
+      }
 
       const encoded = encodeURIComponent(raw);
-      const ipcUrl  = `http://ipc.localhost/navigate?q=${encoded}`;
+      const ipcUrl = `ipc://navigate?q=${encoded}`;
 
       console.log('[JS] Raw input:', raw);
-      console.log('[JS] IPC URL:',  ipcUrl);
+      console.log('[JS] IPC URL:', ipcUrl);
 
-      try {
-        const resp = await fetch(ipcUrl);
+      status.textContent = 'Validating…';
+      status.className = 'loading';
 
-        if (resp.ok) {
-          status.textContent = 'Navigating…';
-        } else {
-          status.textContent = `Error: Rust rejected the request (${resp.status})`;
-          console.error('[JS] IPC request rejected, status:', resp.status);
-        }
-      } catch (err) {
-        status.textContent = 'IPC error: ' + err.message;
-        console.error('[JS] fetch error:', err);
-      }
+      // ── Trigger IPC via hidden iframe (this is what actually calls Rust) ──
+      const ipcFrame = document.createElement('iframe');
+      ipcFrame.style.display = 'none';
+      ipcFrame.src = ipcUrl;
+      document.body.appendChild(ipcFrame);
+
+      // Clean up after the request has been processed
+      setTimeout(() => {
+        if (ipcFrame.parentNode) ipcFrame.parentNode.removeChild(ipcFrame);
+      }, 500);
+
+      // Show the browser frame immediately (Rust will set .src right after)
+      contentArea.style.display = 'none';
+      browserFrame.style.display = 'block';
+
+      console.log('[JS] ✓ IPC request sent via hidden frame');
     }
+
+    // ════════════════════════════════════════════════════════
+    // Event Listeners
+    // ════════════════════════════════════════════════════════
 
     goBtn.addEventListener('click', navigate);
 
@@ -122,6 +225,22 @@
         navigate();
       }
     });
+
+    // Show placeholder on focus
+    input.addEventListener('focus', function() {
+      if (!input.value) {
+        status.textContent = 'Ready';
+        status.className = '';
+      }
+    });
+
+    // Update input value when Rust injects iframe src
+    // (This allows external events to trigger navigation)
+    window.navigationUpdate = function(url) {
+      input.value = url;
+    };
+
+    console.log('[JS] Secure Web Gateway initialized');
   </script>
 </body>
 </html>
