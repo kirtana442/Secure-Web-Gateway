@@ -1,3 +1,6 @@
+[env]
+RUST_BACKTRACE = "1"
+
 [package]
 name = "secure-web-gateway"
 version = "0.1.0"
@@ -6,3 +9,6 @@ edition = "2024"
 [dependencies]
 tao = "0.34"
 wry = "0.53"
+url = "2"
+percent-encoding = "2"
+serde_json = "1"

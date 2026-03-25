@@ -4,32 +4,154 @@
   <meta charset="UTF-8" />
   <title>Secure Web Gateway</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
+      font-family: system-ui, sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
       display: flex;
+      flex-direction: column;
       height: 100vh;
-      justify-content: center;
-      align-items: center;
     }
-    .box {
-      text-align: center;
-      padding: 2rem;
-      border: 1px solid #334155;
-      border-radius: 8px;
+    #toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #181825;
+      border-bottom: 1px solid #313244;
     }
+    #url-input {
+      flex: 1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #45475a;
+      background: #313244;
+      color: #cdd6f4;
+      font-size: 14px;
+      outline: none;
+    }
+    #url-input:focus { border-color: #89b4fa; }
     button {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      background: #45475a;
+      color: #cdd6f4;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #585b70; }
+    #status {
+      font-size: 11px;
+      padding: 2px 12px;
+      color: #6c7086;
+      background: #181825;
+      border-bottom: 1px solid #313244;
+    }
+    #content-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c7086;
     }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h1>Secure Web Gateway</h1>
-    <p>Status: Not authenticated</p>
-    <button disabled>Sign in (coming soon)</button>
+  <div id="toolbar">
+    <input
+      id="url-input"
+      type="text"
+      placeholder="Enter URL or search…"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+    />
+    <button id="go-btn">Go</button>
   </div>
+  <div id="status">Ready</div>
+  <div id="content-area">Type a URL or search query and press Go or Enter.</div>
+
+  <script>
+    const input  = document.getElementById('url-input');
+    const goBtn  = document.getElementById('go-btn');
+    const status = document.getElementById('status');
+
+    async function navigate() {
+      // Strip ALL control characters (\n, \r, \t etc.) then trim spaces.
+      // Belt-and-suspenders alongside preventDefault() below.
+      const raw = input.value
+        .replace(/[\x00-\x1F\x7F]/g, '')
+        .trim();
+
+      if (!raw) return;
+
+      status.textContent = 'Sending to Rust for validation…';
+
+      // ── WHY fetch() INSTEAD OF window.ipc.postMessage() ─────────────
+      //
+      // window.ipc.postMessage() is BROKEN on Windows (wry 0.47–0.53+).
+      //
+      // Internally, wry wraps every postMessage string into a URI:
+      //   https://ipc.localhost/?message=<YOUR STRING>
+      // then calls .unwrap() on the http::Request builder.
+      // Any character forbidden in a URI query string — including
+      // {  }  "  :  (which appear in ALL JSON) — causes:
+      //   InvalidUri(InvalidFormat) → .unwrap() panics → app crashes.
+      //
+      // The fix: use fetch() to a custom scheme URL instead.
+      // wry's custom protocol handler receives a proper http::Request
+      // where WE designed the URL to be URI-safe.
+      //
+      // We put the user input in the query parameter "q", encoded with
+      // encodeURIComponent(). This converts every non-URI-safe character
+      // to its %XX form BEFORE it's embedded in a URL. For example:
+      //
+      //   "https://google.com"  →  "https%3A%2F%2Fgoogle.com"
+      //   "rust tutorial"       →  "rust%20tutorial"
+      //   '{"key":"val"}'       →  "%7B%22key%22%3A%22val%22%7D"
+      //
+      // encodeURIComponent is specifically designed for this: it encodes
+      // everything except: A-Z a-z 0-9 - _ . ! ~ * ' ( )
+      // RFC 3986 permits all of those in query strings.
+      //
+      // On the Rust side, percent_encoding::percent_decode_str() reverses
+      // this back to the original string.
+      // ──────────────────────────────────────────────────────────────────
+
+      const encoded = encodeURIComponent(raw);
+      const ipcUrl  = `ipc://localhost/navigate?q=${encoded}`;
+
+      console.log('[JS] Raw input:', raw);
+      console.log('[JS] IPC URL:',  ipcUrl);
+
+      try {
+        // fetch() to our custom ipc:// scheme.
+        // wry intercepts this — it never hits the network.
+        // The Rust handler returns 200 on success, 400 on bad input.
+        const resp = await fetch(ipcUrl);
+
+        if (resp.ok) {
+          status.textContent = 'Navigating…';
+        } else {
+          status.textContent = `Error: Rust rejected the request (${resp.status})`;
+          console.error('[JS] IPC request rejected, status:', resp.status);
+        }
+      } catch (err) {
+        // fetch() itself threw — network error or CORS issue
+        status.textContent = 'IPC error: ' + err.message;
+        console.error('[JS] fetch error:', err);
+      }
+    }
+
+    goBtn.addEventListener('click', navigate);
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // stop \n being appended to input.value
+        navigate();
+      }
+    });
+  </script>
 </body>
 </html>
