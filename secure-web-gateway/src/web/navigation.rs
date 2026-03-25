@@ -11,7 +11,7 @@ pub fn resolve_input(input: &str) -> String {
         match parsed.scheme(){
             "http" | "https" => {
                 println!("[navigation] Final resolved URL: {}", parsed);
-                return parsed.to_string()
+                return parsed.to_string();
             }
         
             other => {
@@ -22,9 +22,6 @@ pub fn resolve_input(input: &str) -> String {
             }
         }
     }
-    //else{
-    //    eprintln("")
-    //}
 
     if trimmed.contains('.') && !trimmed.contains(' ') {
         let with_scheme = format!("https://{}", trimmed);
