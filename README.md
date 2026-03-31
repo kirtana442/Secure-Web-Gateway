@@ -174,7 +174,7 @@ cargo build
 cargo run
 
 # as ipc is currently blocked by chromium and is yet to be resolved,
-#can test the navigation and sanbox rules using
+# can test the navigation and sandbox rules using
 cargo test
 ```
 
